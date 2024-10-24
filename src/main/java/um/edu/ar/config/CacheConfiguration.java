@@ -50,6 +50,17 @@ public class CacheConfiguration {
             createCache(cm, um.edu.ar.domain.User.class.getName());
             createCache(cm, um.edu.ar.domain.Authority.class.getName());
             createCache(cm, um.edu.ar.domain.User.class.getName() + ".authorities");
+            createCache(cm, um.edu.ar.domain.Venta.class.getName());
+            createCache(cm, um.edu.ar.domain.Dispositivo.class.getName());
+            createCache(cm, um.edu.ar.domain.Dispositivo.class.getName() + ".caracteristicas");
+            createCache(cm, um.edu.ar.domain.Dispositivo.class.getName() + ".personalizaciones");
+            createCache(cm, um.edu.ar.domain.Dispositivo.class.getName() + ".adicionales");
+            createCache(cm, um.edu.ar.domain.Caracteristica.class.getName());
+            createCache(cm, um.edu.ar.domain.Personalizacion.class.getName());
+            createCache(cm, um.edu.ar.domain.Personalizacion.class.getName() + ".opciones");
+            createCache(cm, um.edu.ar.domain.Opcion.class.getName());
+            createCache(cm, um.edu.ar.domain.Adicional.class.getName());
+            createCache(cm, um.edu.ar.domain.Adicional.class.getName() + ".dispositivos");
             // jhipster-needle-ehcache-add-entry
         };
     }
