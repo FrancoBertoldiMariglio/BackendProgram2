@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import um.edu.ar.domain.Dispositivo;
 import um.edu.ar.repository.DispositivoRepository;
 import um.edu.ar.service.dto.DispositivoDTO;
-import um.edu.ar.service.dto.MapperDispositivoDTO;
 import um.edu.ar.service.mapper.DispositivoMapper;
 
 /**
@@ -39,7 +38,7 @@ public class DispositivoService {
      * @param dispositivoDTO the entity to save.
      * @return the persisted entity.
      */
-    public MapperDispositivoDTO save(DispositivoDTO dispositivoDTO) {
+    public DispositivoDTO save(DispositivoDTO dispositivoDTO) {
         LOG.debug("Request to save Dispositivo : {}", dispositivoDTO);
         Dispositivo dispositivo = dispositivoMapper.toEntity(dispositivoDTO);
         dispositivo = dispositivoRepository.save(dispositivo);
@@ -52,7 +51,7 @@ public class DispositivoService {
      * @param dispositivoDTO the entity to save.
      * @return the persisted entity.
      */
-    public MapperDispositivoDTO update(DispositivoDTO dispositivoDTO) {
+    public DispositivoDTO update(DispositivoDTO dispositivoDTO) {
         LOG.debug("Request to update Dispositivo : {}", dispositivoDTO);
         Dispositivo dispositivo = dispositivoMapper.toEntity(dispositivoDTO);
         dispositivo = dispositivoRepository.save(dispositivo);
@@ -65,7 +64,7 @@ public class DispositivoService {
      * @param dispositivoDTO the entity to update partially.
      * @return the persisted entity.
      */
-    public Optional<MapperDispositivoDTO> partialUpdate(DispositivoDTO dispositivoDTO) {
+    public Optional<DispositivoDTO> partialUpdate(DispositivoDTO dispositivoDTO) {
         LOG.debug("Request to partially update Dispositivo : {}", dispositivoDTO);
 
         return dispositivoRepository
@@ -86,13 +85,13 @@ public class DispositivoService {
      * @return the list of entities.
      */
     @Transactional(readOnly = true)
-    public Page<MapperDispositivoDTO> findAll(Pageable pageable) {
+    public Page<DispositivoDTO> findAll(Pageable pageable) {
         LOG.debug("Request to get all Dispositivos");
         return dispositivoRepository.findAll(pageable).map(dispositivoMapper::toDto);
     }
 
     @Transactional(readOnly = true)
-    public List<MapperDispositivoDTO> findAllNoPag() {
+    public List<DispositivoDTO> findAllNoPag() {
         LOG.debug("Request to get all Dispositivos without pagination");
         return dispositivoRepository.findAll().stream().map(dispositivoMapper::toDto).collect(Collectors.toList());
     }
@@ -102,7 +101,7 @@ public class DispositivoService {
      *
      * @return the list of entities.
      */
-    public Page<MapperDispositivoDTO> findAllWithEagerRelationships(Pageable pageable) {
+    public Page<DispositivoDTO> findAllWithEagerRelationships(Pageable pageable) {
         return dispositivoRepository.findAllWithEagerRelationships(pageable).map(dispositivoMapper::toDto);
     }
 
@@ -113,7 +112,7 @@ public class DispositivoService {
      * @return the entity.
      */
     @Transactional(readOnly = true)
-    public Optional<MapperDispositivoDTO> findOne(Long id) {
+    public Optional<DispositivoDTO> findOne(Long id) {
         LOG.debug("Request to get Dispositivo : {}", id);
         return dispositivoRepository.findOneWithEagerRelationships(id).map(dispositivoMapper::toDto);
     }

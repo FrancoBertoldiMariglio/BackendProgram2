@@ -31,6 +31,10 @@ public class DispositivoDTO implements Serializable {
     @NotNull
     private String moneda;
 
+    private Set<CaracteristicaDTO> caracteristicas;
+
+    private Set<PersonalizacionDTO> personalizaciones;
+
     private Set<AdicionalDTO> adicionales = new HashSet<>();
 
     public Long getId() {
@@ -81,6 +85,22 @@ public class DispositivoDTO implements Serializable {
         this.moneda = moneda;
     }
 
+    public Set<CaracteristicaDTO> getCaracteristicas() {
+        return caracteristicas;
+    }
+
+    public void setCaracteristicas(Set<CaracteristicaDTO> caracteristicas) {
+        this.caracteristicas = caracteristicas;
+    }
+
+    public Set<PersonalizacionDTO> getPersonalizaciones() { // Ahora es MapperPersonalizacionDTO
+        return personalizaciones;
+    }
+
+    public void setPersonalizaciones(Set<PersonalizacionDTO> personalizaciones) {
+        this.personalizaciones = personalizaciones;
+    }
+
     public Set<AdicionalDTO> getAdicionales() {
         return adicionales;
     }
@@ -102,7 +122,15 @@ public class DispositivoDTO implements Serializable {
         if (this.id == null) {
             return false;
         }
-        return Objects.equals(this.id, dispositivoDTO.id);
+        return (
+            Objects.equals(this.id, dispositivoDTO.id) &&
+            Objects.equals(this.codigo, dispositivoDTO.codigo) &&
+            Objects.equals(this.nombre, dispositivoDTO.nombre) &&
+            Objects.equals(this.descripcion, dispositivoDTO.descripcion) &&
+            Objects.equals(this.precioBase, dispositivoDTO.precioBase) &&
+            Objects.equals(this.moneda, dispositivoDTO.moneda) &&
+            Objects.equals(this.adicionales, dispositivoDTO.adicionales)
+        );
     }
 
     @Override

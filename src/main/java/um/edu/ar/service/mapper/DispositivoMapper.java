@@ -8,10 +8,10 @@ import um.edu.ar.domain.Dispositivo;
 import um.edu.ar.service.dto.*;
 
 /**
- * Mapper for the entity {@link Dispositivo} and its DTO {@link MapperDispositivoDTO}.
+ * Mapper for the entity {@link Dispositivo} and its DTO {@link DispositivoDTO}.
  */
 @Mapper(componentModel = "spring")
-public interface DispositivoMapper extends EntityMapper<MapperDispositivoDTO, Dispositivo> {
+public interface DispositivoMapper extends EntityMapper<DispositivoDTO, Dispositivo> {
     @Mapping(target = "caracteristicas", source = "caracteristicas")
     @Mapping(target = "personalizaciones", source = "personalizaciones")
     @Mapping(target = "adicionales", source = "adicionales")
@@ -21,9 +21,9 @@ public interface DispositivoMapper extends EntityMapper<MapperDispositivoDTO, Di
     @Mapping(target = "caracteristicas", source = "caracteristicas")
     @Mapping(target = "personalizaciones", source = "personalizaciones")
     @Mapping(target = "adicionales", source = "adicionales")
-    default MapperDispositivoDTO toDto(Dispositivo dispositivo) {
+    default DispositivoDTO toDto(Dispositivo dispositivo) {
         try {
-            MapperDispositivoDTO dto = new MapperDispositivoDTO();
+            DispositivoDTO dto = new DispositivoDTO();
             dto.setId(dispositivo.getId());
             dto.setCodigo(dispositivo.getCodigo());
             dto.setNombre(dispositivo.getNombre());
@@ -50,12 +50,12 @@ public interface DispositivoMapper extends EntityMapper<MapperDispositivoDTO, Di
                     .getPersonalizaciones()
                     .stream()
                     .map(personalizacion -> {
-                        MapperPersonalizacionDTO mapperPersonalizacionDTO = new MapperPersonalizacionDTO();
-                        mapperPersonalizacionDTO.setId(personalizacion.getId());
-                        mapperPersonalizacionDTO.setNombre(personalizacion.getNombre());
-                        mapperPersonalizacionDTO.setDescripcion(personalizacion.getDescripcion());
+                        PersonalizacionDTO personalizacionDTO = new PersonalizacionDTO();
+                        personalizacionDTO.setId(personalizacion.getId());
+                        personalizacionDTO.setNombre(personalizacion.getNombre());
+                        personalizacionDTO.setDescripcion(personalizacion.getDescripcion());
 
-                        mapperPersonalizacionDTO.setOpciones(
+                        personalizacionDTO.setOpciones(
                             personalizacion
                                 .getOpciones()
                                 .stream()
@@ -70,7 +70,7 @@ public interface DispositivoMapper extends EntityMapper<MapperDispositivoDTO, Di
                                 })
                                 .collect(Collectors.toSet())
                         );
-                        return mapperPersonalizacionDTO;
+                        return personalizacionDTO;
                     })
                     .collect(Collectors.toSet())
             );
@@ -107,7 +107,4 @@ public interface DispositivoMapper extends EntityMapper<MapperDispositivoDTO, Di
     default Set<AdicionalDTO> toDtoAdicionalIdSet(Set<Adicional> adicional) {
         return adicional.stream().map(this::toDtoAdicionalId).collect(Collectors.toSet());
     }
-
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    Dispositivo partialUpdate(@MappingTarget Dispositivo dispositivo, DispositivoDTO dispositivoDTO);
 }

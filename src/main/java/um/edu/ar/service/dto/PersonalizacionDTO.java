@@ -3,6 +3,7 @@ package um.edu.ar.service.dto;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * A DTO for the {@link um.edu.ar.domain.Personalizacion} entity.
@@ -19,6 +20,8 @@ public class PersonalizacionDTO implements Serializable {
     private String descripcion;
 
     private DispositivoDTO dispositivo;
+
+    private Set<OpcionDTO> opciones;
 
     public Long getId() {
         return id;
@@ -50,6 +53,14 @@ public class PersonalizacionDTO implements Serializable {
 
     public void setDispositivo(DispositivoDTO dispositivo) {
         this.dispositivo = dispositivo;
+    }
+
+    public Set<OpcionDTO> getOpciones() { // Añadido desde PersonalizacionDTO
+        return opciones;
+    }
+
+    public void setOpciones(Set<OpcionDTO> opciones) { // Añadido desde PersonalizacionDTO
+        this.opciones = opciones;
     }
 
     @Override
