@@ -19,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
 import tech.jhipster.web.util.ResponseUtil;
+import um.edu.ar.domain.Venta;
 import um.edu.ar.repository.VentaRepository;
 import um.edu.ar.service.VentaService;
 import um.edu.ar.service.dto.VentaDTO;
@@ -52,18 +53,14 @@ public class VentaResource {
      *
      * @param ventaDTO the ventaDTO to create.
      * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new ventaDTO, or with status {@code 400 (Bad Request)} if the venta has already an ID.
-     * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("")
-    public ResponseEntity<VentaDTO> createVenta(@Valid @RequestBody VentaDTO ventaDTO) throws URISyntaxException {
+    public Venta createVenta(@Valid @RequestBody VentaDTO ventaDTO) {
         LOG.debug("REST request to save Venta : {}", ventaDTO);
         if (ventaDTO.getId() != null) {
             throw new BadRequestAlertException("A new venta cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        ventaDTO = ventaService.save(ventaDTO);
-        return ResponseEntity.created(new URI("/api/ventas/" + ventaDTO.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, ventaDTO.getId().toString()))
-            .body(ventaDTO);
+        return ventaService.realizarVenta(ventaDTO);
     }
 
     /**

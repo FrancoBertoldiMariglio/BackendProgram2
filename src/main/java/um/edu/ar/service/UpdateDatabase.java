@@ -101,10 +101,10 @@ public class UpdateDatabase {
 
         for (DispositivoDTO remoteDevice : devices) {
             DispositivoDTO localDevice = localDeviceMap.get(remoteDevice.getId());
-            //            if (localDevice == null || !localDevice.equals(remoteDevice)) {
-            //                dispositivoService.save(remoteDevice);
-            //                LOG.info("Device updated: {}", remoteDevice.getId());
-            //            }
+            if (localDevice == null || !localDevice.equals(remoteDevice)) {
+                dispositivoService.save(remoteDevice);
+                LOG.info("Device updated: {}", remoteDevice.getId());
+            }
         }
         LOG.info("Local database updated successfully");
     }
