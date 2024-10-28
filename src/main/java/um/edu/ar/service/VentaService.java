@@ -3,14 +3,15 @@ package um.edu.ar.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -24,6 +25,7 @@ import um.edu.ar.repository.UserRepository;
 import um.edu.ar.repository.VentaRepository;
 import um.edu.ar.service.dto.VentaDTO;
 import um.edu.ar.service.dto.VentaProfeDTO;
+import um.edu.ar.service.mapper.UserMapper;
 import um.edu.ar.service.mapper.VentaMapper;
 
 /**
@@ -38,13 +40,13 @@ public class VentaService {
     private final VentaRepository ventaRepository;
     private final UserRepository userRepository;
 
+    private final VentaMapper ventaMapper;
+
     private static final RestTemplate restTemplate = new RestTemplate();
 
     private static final String postUrl = "http://192.168.194.254:8080/api/catedra/";
 
-    private final VentaMapper ventaMapper;
-
-    public VentaService(VentaRepository ventaRepository, UserRepository userRepository, VentaMapper ventaMapper) {
+    public VentaService(VentaRepository ventaRepository, UserRepository userRepository, UserMapper userMapper, VentaMapper ventaMapper) {
         this.ventaRepository = ventaRepository;
         this.userRepository = userRepository;
         this.ventaMapper = ventaMapper;
@@ -134,21 +136,16 @@ public class VentaService {
         LOG.debug("Request to save Venta : {}", ventaDTO);
         String token = loadTokenFromFile();
 
-        // Obtener el usuario desde el repositorio
         User user = userRepository.findById(ventaDTO.getUser().getId()).orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Crear los headers y agregar el token JWT
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
 
-        // Crear la entidad HTTP con los headers y el cuerpo de la solicitud
         HttpEntity<VentaDTO> entity = new HttpEntity<>(ventaDTO, headers);
 
-        // Enviar solicitud al backend del profesor
         ResponseEntity<VentaProfeDTO> response = restTemplate.exchange(postUrl + "/vender", HttpMethod.POST, entity, VentaProfeDTO.class);
         Venta venta = new Venta();
 
-        // Si la respuesta es exitosa, guardar la venta en la base de datos
         if (response.getStatusCode().is2xxSuccessful()) {
             venta.setId(Objects.requireNonNull(response.getBody()).getIdVenta());
             venta.setFechaVenta(ventaDTO.getFechaVenta());
@@ -160,6 +157,11 @@ public class VentaService {
             throw new RuntimeException("Error during venta request");
         }
         return venta;
+    }
+
+    public List<VentaDTO> getVentasByUserId(Long userId) {
+        List<Venta> ventas = ventaRepository.findByUserId(userId);
+        return ventas.stream().map(ventaMapper::toDto).collect(Collectors.toList());
     }
 
     private String loadTokenFromFile() {

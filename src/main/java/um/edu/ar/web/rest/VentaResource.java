@@ -173,4 +173,11 @@ public class VentaResource {
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
     }
+
+    @GetMapping("/user/{userId}/ventas")
+    public ResponseEntity<List<VentaDTO>> getAllVentasByUserId(@PathVariable Long userId) {
+        LOG.debug("REST request to get all Ventas by user with id: {}", userId);
+        List<VentaDTO> ventas = ventaService.getVentasByUserId(userId);
+        return ResponseEntity.ok().body(ventas);
+    }
 }

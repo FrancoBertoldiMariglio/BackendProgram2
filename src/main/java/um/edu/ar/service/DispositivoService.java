@@ -102,6 +102,7 @@ public class DispositivoService {
      * @return the list of entities.
      */
     public Page<DispositivoDTO> findAllWithEagerRelationships(Pageable pageable) {
+        LOG.debug("Request to get all Dispositivos with eager load of many-to-many relationships");
         return dispositivoRepository.findAllWithEagerRelationships(pageable).map(dispositivoMapper::toDto);
     }
 
