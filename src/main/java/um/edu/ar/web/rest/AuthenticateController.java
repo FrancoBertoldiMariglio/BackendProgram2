@@ -8,6 +8,9 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +29,9 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
+import um.edu.ar.domain.Authority;
+import um.edu.ar.domain.User;
+import um.edu.ar.service.UserService;
 import um.edu.ar.web.rest.vm.LoginVM;
 
 /**
@@ -46,14 +52,20 @@ public class AuthenticateController {
     private long tokenValidityInSecondsForRememberMe;
 
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
+    private final UserService userService;
 
-    public AuthenticateController(JwtEncoder jwtEncoder, AuthenticationManagerBuilder authenticationManagerBuilder) {
+    public AuthenticateController(
+        JwtEncoder jwtEncoder,
+        AuthenticationManagerBuilder authenticationManagerBuilder,
+        UserService userService
+    ) {
         this.jwtEncoder = jwtEncoder;
         this.authenticationManagerBuilder = authenticationManagerBuilder;
+        this.userService = userService;
     }
 
     @PostMapping("/authenticate")
-    public ResponseEntity<JWTToken> authorize(@Valid @RequestBody LoginVM loginVM) {
+    public ResponseEntity<AuthorizeResponse> authorize(@Valid @RequestBody LoginVM loginVM) {
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
             loginVM.getUsername(),
             loginVM.getPassword()
@@ -62,9 +74,14 @@ public class AuthenticateController {
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = this.createToken(authentication, loginVM.isRememberMe());
+
+        Optional<User> userOptional = userService.getUserWithAuthoritiesByLogin(loginVM.getUsername());
+        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+        Set<Authority> roles = user.getAuthorities();
+
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBearerAuth(jwt);
-        return new ResponseEntity<>(new JWTToken(jwt), httpHeaders, HttpStatus.OK);
+        return new ResponseEntity<>(new AuthorizeResponse(jwt, user.getId(), roles), httpHeaders, HttpStatus.OK);
     }
 
     /**
@@ -105,12 +122,16 @@ public class AuthenticateController {
     /**
      * Object to return as body in JWT Authentication.
      */
-    static class JWTToken {
+    static class AuthorizeResponse {
 
         private String idToken;
+        private Long userId;
+        private Set<Authority> roles;
 
-        JWTToken(String idToken) {
+        AuthorizeResponse(String idToken, Long userId, Set<Authority> roles) {
             this.idToken = idToken;
+            this.userId = userId;
+            this.roles = roles;
         }
 
         @JsonProperty("id_token")
@@ -120,6 +141,23 @@ public class AuthenticateController {
 
         void setIdToken(String idToken) {
             this.idToken = idToken;
+        }
+
+        @JsonProperty("userId")
+        Long getUserId() {
+            return userId;
+        }
+        void setUserId(Long userId) {
+            this.userId = userId;
+        }
+
+        @JsonProperty("roles")
+        Set<Authority> getRoles() {
+            return roles;
+        }
+
+        void setRoles(Set<Authority> roles) {
+            this.roles = roles;
         }
     }
 }
