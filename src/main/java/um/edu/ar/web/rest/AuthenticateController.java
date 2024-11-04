@@ -134,7 +134,7 @@ public class AuthenticateController {
             this.roles = roles;
         }
 
-        @JsonProperty("id_token")
+        @JsonProperty("idToken")
         String getIdToken() {
             return idToken;
         }
