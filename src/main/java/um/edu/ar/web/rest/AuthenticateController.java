@@ -66,18 +66,33 @@ public class AuthenticateController {
 
     @PostMapping("/authenticate")
     public ResponseEntity<AuthorizeResponse> authorize(@Valid @RequestBody LoginVM loginVM) {
+        LOG.debug("REST request to authenticate user: {}", loginVM.getUsername());
+
+        LOG.debug("Creating authentication token");
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
             loginVM.getUsername(),
             loginVM.getPassword()
         );
 
+        LOG.debug("Attempting authentication for user: {}", loginVM.getUsername());
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        LOG.debug("Generating JWT token");
         String jwt = this.createToken(authentication, loginVM.isRememberMe());
 
+        LOG.debug("Retrieving user details for: {}", loginVM.getUsername());
         Optional<User> userOptional = userService.getUserWithAuthoritiesByLogin(loginVM.getUsername());
-        User user = userOptional.orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!userOptional.isPresent()) {
+            LOG.error("Authentication failed - User not found: {}", loginVM.getUsername());
+            throw new RuntimeException("User not found");
+        }
+
+        User user = userOptional.get();
         Set<Authority> roles = user.getAuthorities();
+
+        LOG.info("User authenticated successfully: {}", loginVM.getUsername());
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBearerAuth(jwt);
@@ -93,21 +108,33 @@ public class AuthenticateController {
     @GetMapping(value = "/authenticate", produces = MediaType.TEXT_PLAIN_VALUE)
     public String isAuthenticated(Principal principal) {
         LOG.debug("REST request to check if the current user is authenticated");
+        LOG.debug("Checking authentication status");
+
+        boolean isAuth = principal != null;
+        if (isAuth) {
+            LOG.debug("User is authenticated: {}", principal.getName());
+        } else {
+            LOG.debug("No authenticated user found");
+        }
+
         return principal == null ? null : principal.getName();
     }
 
     public String createToken(Authentication authentication, boolean rememberMe) {
+        LOG.debug("Creating new token for user: {}", authentication.getName());
+
         String authorities = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(" "));
 
         Instant now = Instant.now();
         Instant validity;
         if (rememberMe) {
+            LOG.debug("Creating remember-me token");
             validity = now.plus(this.tokenValidityInSecondsForRememberMe, ChronoUnit.SECONDS);
         } else {
+            LOG.debug("Creating standard token");
             validity = now.plus(this.tokenValidityInSeconds, ChronoUnit.SECONDS);
         }
 
-        // @formatter:off
         JwtClaimsSet claims = JwtClaimsSet.builder()
             .issuedAt(now)
             .expiresAt(validity)
@@ -116,6 +143,9 @@ public class AuthenticateController {
             .build();
 
         JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();
+        LOG.debug("Token created successfully for user: {}", authentication.getName());
+        // No logging of token values or claims
+
         return this.jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, claims)).getTokenValue();
     }
 
@@ -147,6 +177,7 @@ public class AuthenticateController {
         Long getUserId() {
             return userId;
         }
+
         void setUserId(Long userId) {
             this.userId = userId;
         }

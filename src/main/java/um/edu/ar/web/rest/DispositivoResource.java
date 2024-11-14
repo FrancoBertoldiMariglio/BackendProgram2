@@ -56,14 +56,18 @@ public class DispositivoResource {
      */
     @PostMapping("")
     public ResponseEntity<DispositivoDTO> createDispositivo(@Valid @RequestBody DispositivoDTO dispositivoDTO) throws URISyntaxException {
-        LOG.debug("REST request to save Dispositivo : {}", dispositivoDTO);
+        LOG.debug("REST request to create new Device: {}", dispositivoDTO);
+        LOG.debug("Validating device data");
         if (dispositivoDTO.getId() != null) {
-            throw new BadRequestAlertException("A new dispositivo cannot already have an ID", ENTITY_NAME, "idexists");
+            LOG.error("Attempt to create device with existing ID: {}", dispositivoDTO.getId());
+            throw new BadRequestAlertException("A new device cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        dispositivoDTO = dispositivoService.save(dispositivoDTO);
-        return ResponseEntity.created(new URI("/api/dispositivos/" + dispositivoDTO.getId()))
-            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, dispositivoDTO.getId().toString()))
-            .body(dispositivoDTO);
+        LOG.debug("Saving new device");
+        DispositivoDTO result = dispositivoService.save(dispositivoDTO);
+        LOG.info("Device created successfully with ID: {}", result.getId());
+        return ResponseEntity.created(new URI("/api/dispositivos/" + result.getId()))
+            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+            .body(result);
     }
 
     /**
@@ -81,19 +85,26 @@ public class DispositivoResource {
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody DispositivoDTO dispositivoDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to update Dispositivo : {}, {}", id, dispositivoDTO);
+        LOG.debug("REST request to update Device. ID: {}, Data: {}", id, dispositivoDTO);
+        LOG.debug("Validating device ID");
         if (dispositivoDTO.getId() == null) {
+            LOG.error("Attempt to update device without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, dispositivoDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, dispositivoDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Checking if device exists with ID: {}", id);
         if (!dispositivoRepository.existsById(id)) {
+            LOG.error("Device not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Updating device through service");
         dispositivoDTO = dispositivoService.update(dispositivoDTO);
+        LOG.info("Device updated successfully with ID: {}", dispositivoDTO.getId());
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, dispositivoDTO.getId().toString()))
             .body(dispositivoDTO);
@@ -115,20 +126,26 @@ public class DispositivoResource {
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody DispositivoDTO dispositivoDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to partial update Dispositivo partially : {}, {}", id, dispositivoDTO);
+        LOG.debug("REST request to partially update Device. ID: {}, Data: {}", id, dispositivoDTO);
+        LOG.debug("Validating device data");
         if (dispositivoDTO.getId() == null) {
+            LOG.error("Attempt to partially update without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, dispositivoDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, dispositivoDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Checking if device exists with ID: {}", id);
         if (!dispositivoRepository.existsById(id)) {
+            LOG.error("Device not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Processing partial update");
         Optional<DispositivoDTO> result = dispositivoService.partialUpdate(dispositivoDTO);
-
+        LOG.info("Partial update completed for device ID: {}", id);
         return ResponseUtil.wrapOrNotFound(
             result,
             HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, dispositivoDTO.getId().toString())
@@ -147,14 +164,19 @@ public class DispositivoResource {
         @org.springdoc.core.annotations.ParameterObject Pageable pageable,
         @RequestParam(name = "eagerload", required = false, defaultValue = "true") boolean eagerload
     ) {
-        LOG.debug("REST request to get a page of Dispositivos");
+        LOG.debug("REST request to get all Devices. Pageable: {}, Eagerload: {}", pageable, eagerload);
+        LOG.debug("Retrieving page of devices");
         Page<DispositivoDTO> page;
         if (eagerload) {
+            LOG.debug("Using eager loading for relationships");
             page = dispositivoService.findAllWithEagerRelationships(pageable);
         } else {
+            LOG.debug("Using lazy loading for relationships");
             page = dispositivoService.findAll(pageable);
         }
+        LOG.debug("Total elements found: {}", page.getTotalElements());
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
+        LOG.info("Returning {} devices", page.getNumberOfElements());
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
@@ -166,8 +188,14 @@ public class DispositivoResource {
      */
     @GetMapping("/{id}")
     public ResponseEntity<DispositivoDTO> getDispositivo(@PathVariable("id") Long id) {
-        LOG.debug("REST request to get Dispositivo : {}", id);
+        LOG.debug("REST request to get Device with ID: {}", id);
+        LOG.debug("Looking up device in service");
         Optional<DispositivoDTO> dispositivoDTO = dispositivoService.findOne(id);
+        if (dispositivoDTO.isPresent()) {
+            LOG.info("Device found with ID: {}", id);
+        } else {
+            LOG.warn("Device not found with ID: {}", id);
+        }
         return ResponseUtil.wrapOrNotFound(dispositivoDTO);
     }
 
@@ -179,8 +207,10 @@ public class DispositivoResource {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDispositivo(@PathVariable("id") Long id) {
-        LOG.debug("REST request to delete Dispositivo : {}", id);
+        LOG.debug("REST request to delete Device with ID: {}", id);
+        LOG.debug("Starting deletion process");
         dispositivoService.delete(id);
+        LOG.info("Device successfully deleted with ID: {}", id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();

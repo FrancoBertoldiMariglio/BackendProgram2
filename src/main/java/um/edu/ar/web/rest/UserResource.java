@@ -60,6 +60,8 @@ import um.edu.ar.web.rest.errors.LoginAlreadyUsedException;
 @RequestMapping("/api/admin")
 public class UserResource {
 
+    private static final Logger LOG = LoggerFactory.getLogger(UserResource.class);
+
     private static final List<String> ALLOWED_ORDERED_PROPERTIES = Collections.unmodifiableList(
         Arrays.asList(
             "id",
@@ -76,18 +78,15 @@ public class UserResource {
         )
     );
 
-    private static final Logger LOG = LoggerFactory.getLogger(UserResource.class);
-
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
 
     private final UserService userService;
-
     private final UserRepository userRepository;
-
     private final MailService mailService;
 
     public UserResource(UserService userService, UserRepository userRepository, MailService mailService) {
+        LOG.debug("Initializing UserResource");
         this.userService = userService;
         this.userRepository = userRepository;
         this.mailService = mailService;
@@ -108,22 +107,35 @@ public class UserResource {
     @PostMapping("/users")
     @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
     public ResponseEntity<User> createUser(@Valid @RequestBody AdminUserDTO userDTO) throws URISyntaxException {
-        LOG.debug("REST request to save User : {}", userDTO);
+        LOG.debug("REST request to create new User: {}", userDTO);
+        LOG.debug("Validating user data");
 
         if (userDTO.getId() != null) {
+            LOG.error("Attempt to create user with existing ID: {}", userDTO.getId());
             throw new BadRequestAlertException("A new user cannot already have an ID", "userManagement", "idexists");
-            // Lowercase the user login before comparing with database
-        } else if (userRepository.findOneByLogin(userDTO.getLogin().toLowerCase()).isPresent()) {
-            throw new LoginAlreadyUsedException();
-        } else if (userRepository.findOneByEmailIgnoreCase(userDTO.getEmail()).isPresent()) {
-            throw new EmailAlreadyUsedException();
-        } else {
-            User newUser = userService.createUser(userDTO);
-            mailService.sendCreationEmail(newUser);
-            return ResponseEntity.created(new URI("/api/admin/users/" + newUser.getLogin()))
-                .headers(HeaderUtil.createAlert(applicationName, "userManagement.created", newUser.getLogin()))
-                .body(newUser);
         }
+
+        LOG.debug("Checking for existing login: {}", userDTO.getLogin().toLowerCase());
+        if (userRepository.findOneByLogin(userDTO.getLogin().toLowerCase()).isPresent()) {
+            LOG.error("Login already in use: {}", userDTO.getLogin());
+            throw new LoginAlreadyUsedException();
+        }
+
+        LOG.debug("Checking for existing email: {}", userDTO.getEmail());
+        if (userRepository.findOneByEmailIgnoreCase(userDTO.getEmail()).isPresent()) {
+            LOG.error("Email already in use: {}", userDTO.getEmail());
+            throw new EmailAlreadyUsedException();
+        }
+
+        LOG.debug("Creating new user");
+        User newUser = userService.createUser(userDTO);
+        LOG.debug("Sending creation email");
+        mailService.sendCreationEmail(newUser);
+        LOG.info("User created successfully: {}", newUser.getLogin());
+
+        return ResponseEntity.created(new URI("/api/admin/users/" + newUser.getLogin()))
+            .headers(HeaderUtil.createAlert(applicationName, "userManagement.created", newUser.getLogin()))
+            .body(newUser);
     }
 
     /**
@@ -140,16 +152,25 @@ public class UserResource {
         @PathVariable(name = "login", required = false) @Pattern(regexp = Constants.LOGIN_REGEX) String login,
         @Valid @RequestBody AdminUserDTO userDTO
     ) {
-        LOG.debug("REST request to update User : {}", userDTO);
+        LOG.debug("REST request to update User: {}", userDTO);
+
+        LOG.debug("Checking email uniqueness: {}", userDTO.getEmail());
         Optional<User> existingUser = userRepository.findOneByEmailIgnoreCase(userDTO.getEmail());
         if (existingUser.isPresent() && (!existingUser.orElseThrow().getId().equals(userDTO.getId()))) {
+            LOG.error("Email already in use: {}", userDTO.getEmail());
             throw new EmailAlreadyUsedException();
         }
+
+        LOG.debug("Checking login uniqueness: {}", userDTO.getLogin().toLowerCase());
         existingUser = userRepository.findOneByLogin(userDTO.getLogin().toLowerCase());
         if (existingUser.isPresent() && (!existingUser.orElseThrow().getId().equals(userDTO.getId()))) {
+            LOG.error("Login already in use: {}", userDTO.getLogin());
             throw new LoginAlreadyUsedException();
         }
+
+        LOG.debug("Processing user update");
         Optional<AdminUserDTO> updatedUser = userService.updateUser(userDTO);
+        LOG.info("User updated successfully: {}", userDTO.getLogin());
 
         return ResponseUtil.wrapOrNotFound(
             updatedUser,
@@ -166,18 +187,19 @@ public class UserResource {
     @GetMapping("/users")
     @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
     public ResponseEntity<List<AdminUserDTO>> getAllUsers(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
-        LOG.debug("REST request to get all User for an admin");
+        LOG.debug("REST request to get all Users with pageable: {}", pageable);
+
         if (!onlyContainsAllowedProperties(pageable)) {
+            LOG.error("Invalid sort properties in request");
             return ResponseEntity.badRequest().build();
         }
 
+        LOG.debug("Retrieving managed users");
         final Page<AdminUserDTO> page = userService.getAllManagedUsers(pageable);
+        LOG.info("Retrieved {} users", page.getTotalElements());
+
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
-    }
-
-    private boolean onlyContainsAllowedProperties(Pageable pageable) {
-        return pageable.getSort().stream().map(Sort.Order::getProperty).allMatch(ALLOWED_ORDERED_PROPERTIES::contains);
     }
 
     /**
@@ -189,8 +211,15 @@ public class UserResource {
     @GetMapping("/users/{login}")
     @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
     public ResponseEntity<AdminUserDTO> getUser(@PathVariable("login") @Pattern(regexp = Constants.LOGIN_REGEX) String login) {
-        LOG.debug("REST request to get User : {}", login);
-        return ResponseUtil.wrapOrNotFound(userService.getUserWithAuthoritiesByLogin(login).map(AdminUserDTO::new));
+        LOG.debug("REST request to get User: {}", login);
+        LOG.debug("Retrieving user details");
+        Optional<AdminUserDTO> user = userService.getUserWithAuthoritiesByLogin(login).map(AdminUserDTO::new);
+        if (user.isPresent()) {
+            LOG.info("User found: {}", login);
+        } else {
+            LOG.warn("User not found: {}", login);
+        }
+        return ResponseUtil.wrapOrNotFound(user);
     }
 
     /**
@@ -203,7 +232,14 @@ public class UserResource {
     @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
     public ResponseEntity<Void> deleteUser(@PathVariable("login") @Pattern(regexp = Constants.LOGIN_REGEX) String login) {
         LOG.debug("REST request to delete User: {}", login);
+        LOG.debug("Processing user deletion");
         userService.deleteUser(login);
+        LOG.info("User successfully deleted: {}", login);
         return ResponseEntity.noContent().headers(HeaderUtil.createAlert(applicationName, "userManagement.deleted", login)).build();
+    }
+
+    private boolean onlyContainsAllowedProperties(Pageable pageable) {
+        LOG.debug("Validating sort properties: {}", pageable.getSort());
+        return pageable.getSort().stream().map(Sort.Order::getProperty).allMatch(ALLOWED_ORDERED_PROPERTIES::contains);
     }
 }

@@ -57,11 +57,20 @@ public class AccountResource {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public void registerAccount(@Valid @RequestBody ManagedUserVM managedUserVM) {
+        LOG.debug("REST request to register new user account: {}", managedUserVM.getLogin());
+        LOG.debug("Validating password requirements");
         if (isPasswordLengthInvalid(managedUserVM.getPassword())) {
+            LOG.warn("Invalid password length for user: {}", managedUserVM.getLogin());
             throw new InvalidPasswordException();
         }
+
+        LOG.debug("Registering new user");
         User user = userService.registerUser(managedUserVM, managedUserVM.getPassword());
+        LOG.info("User registered successfully: {}", user.getLogin());
+
+        LOG.debug("Sending activation email");
         mailService.sendActivationEmail(user);
+        LOG.info("Activation email sent to user: {}", user.getLogin());
     }
 
     /**
@@ -72,10 +81,16 @@ public class AccountResource {
      */
     @GetMapping("/activate")
     public void activateAccount(@RequestParam(value = "key") String key) {
+        LOG.debug("REST request to activate account");
+        LOG.debug("Attempting to activate account with provided key");
         Optional<User> user = userService.activateRegistration(key);
+
         if (!user.isPresent()) {
+            LOG.warn("Failed activation attempt - key not found");
             throw new AccountResourceException("No user was found for this activation key");
         }
+
+        LOG.info("User account activated successfully: {}", user.get().getLogin());
     }
 
     /**
@@ -86,10 +101,18 @@ public class AccountResource {
      */
     @GetMapping("/account")
     public AdminUserDTO getAccount() {
+        LOG.debug("REST request to get current user account");
+
         return userService
             .getUserWithAuthorities()
-            .map(AdminUserDTO::new)
-            .orElseThrow(() -> new AccountResourceException("User could not be found"));
+            .map(user -> {
+                LOG.info("Retrieved account details for user: {}", user.getLogin());
+                return new AdminUserDTO(user);
+            })
+            .orElseThrow(() -> {
+                LOG.error("Failed to retrieve current user account");
+                return new AccountResourceException("User could not be found");
+            });
     }
 
     /**
@@ -101,16 +124,28 @@ public class AccountResource {
      */
     @PostMapping("/account")
     public void saveAccount(@Valid @RequestBody AdminUserDTO userDTO) {
+        LOG.debug("REST request to update user account");
+
         String userLogin = SecurityUtils.getCurrentUserLogin()
-            .orElseThrow(() -> new AccountResourceException("Current user login not found"));
+            .orElseThrow(() -> {
+                LOG.error("Failed to retrieve current user login");
+                return new AccountResourceException("Current user login not found");
+            });
+
+        LOG.debug("Checking email uniqueness for user: {}", userLogin);
         Optional<User> existingUser = userRepository.findOneByEmailIgnoreCase(userDTO.getEmail());
         if (existingUser.isPresent() && (!existingUser.orElseThrow().getLogin().equalsIgnoreCase(userLogin))) {
+            LOG.warn("Email already in use: {}", userDTO.getEmail());
             throw new EmailAlreadyUsedException();
         }
+
         Optional<User> user = userRepository.findOneByLogin(userLogin);
         if (!user.isPresent()) {
+            LOG.error("User not found: {}", userLogin);
             throw new AccountResourceException("User could not be found");
         }
+
+        LOG.debug("Updating user account information");
         userService.updateUser(
             userDTO.getFirstName(),
             userDTO.getLastName(),
@@ -118,6 +153,7 @@ public class AccountResource {
             userDTO.getLangKey(),
             userDTO.getImageUrl()
         );
+        LOG.info("User account updated successfully: {}", userLogin);
     }
 
     /**
@@ -128,10 +164,17 @@ public class AccountResource {
      */
     @PostMapping(path = "/account/change-password")
     public void changePassword(@RequestBody PasswordChangeDTO passwordChangeDto) {
+        LOG.debug("REST request to change password for current user");
+        LOG.debug("Validating new password requirements");
+
         if (isPasswordLengthInvalid(passwordChangeDto.getNewPassword())) {
+            LOG.warn("Invalid password length in change password request");
             throw new InvalidPasswordException();
         }
+
+        LOG.debug("Processing password change");
         userService.changePassword(passwordChangeDto.getCurrentPassword(), passwordChangeDto.getNewPassword());
+        LOG.info("Password changed successfully for user");
     }
 
     /**
@@ -141,13 +184,16 @@ public class AccountResource {
      */
     @PostMapping(path = "/account/reset-password/init")
     public void requestPasswordReset(@RequestBody String mail) {
+        LOG.debug("REST request to initialize password reset");
         Optional<User> user = userService.requestPasswordReset(mail);
+
         if (user.isPresent()) {
+            LOG.debug("Sending password reset email");
             mailService.sendPasswordResetMail(user.orElseThrow());
+            LOG.info("Password reset email sent successfully");
         } else {
-            // Pretend the request has been successful to prevent checking which emails really exist
-            // but log that an invalid attempt has been made
-            LOG.warn("Password reset requested for non existing mail");
+            // Security measure: Don't reveal if email exists
+            LOG.warn("Password reset requested for non-existing mail");
         }
     }
 
@@ -160,14 +206,23 @@ public class AccountResource {
      */
     @PostMapping(path = "/account/reset-password/finish")
     public void finishPasswordReset(@RequestBody KeyAndPasswordVM keyAndPassword) {
+        LOG.debug("REST request to finish password reset");
+        LOG.debug("Validating new password requirements");
+
         if (isPasswordLengthInvalid(keyAndPassword.getNewPassword())) {
+            LOG.warn("Invalid password length in reset password request");
             throw new InvalidPasswordException();
         }
+
+        LOG.debug("Processing password reset completion");
         Optional<User> user = userService.completePasswordReset(keyAndPassword.getNewPassword(), keyAndPassword.getKey());
 
         if (!user.isPresent()) {
+            LOG.warn("Failed password reset attempt - invalid reset key");
             throw new AccountResourceException("No user was found for this reset key");
         }
+
+        LOG.info("Password reset completed successfully for user: {}", user.get().getLogin());
     }
 
     private static boolean isPasswordLengthInvalid(String password) {

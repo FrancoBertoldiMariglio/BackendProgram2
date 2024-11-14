@@ -33,14 +33,12 @@ import um.edu.ar.web.rest.errors.BadRequestAlertException;
 public class VentaResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(VentaResource.class);
-
     private static final String ENTITY_NAME = "venta";
 
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
 
     private final VentaService ventaService;
-
     private final VentaRepository ventaRepository;
 
     public VentaResource(VentaService ventaService, VentaRepository ventaRepository) {
@@ -56,11 +54,16 @@ public class VentaResource {
      */
     @PostMapping("")
     public Venta createVenta(@Valid @RequestBody VentaDTO ventaDTO) {
-        LOG.debug("REST request to save Venta : {}", ventaDTO);
+        LOG.debug("REST request to save Sale: {}", ventaDTO);
+        LOG.debug("Validating that sale has no existing ID");
         if (ventaDTO.getId() != null) {
+            LOG.error("Attempt to create sale with existing ID: {}", ventaDTO.getId());
             throw new BadRequestAlertException("A new venta cannot already have an ID", ENTITY_NAME, "idexists");
         }
-        return ventaService.realizarVenta(ventaDTO);
+        LOG.debug("Processing sale through service");
+        Venta result = ventaService.realizarVenta(ventaDTO);
+        LOG.info("Sale successfully created with ID: {}", result.getId());
+        return result;
     }
 
     /**
@@ -78,19 +81,26 @@ public class VentaResource {
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody VentaDTO ventaDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to update Venta : {}, {}", id, ventaDTO);
+        LOG.debug("REST request to update Sale. ID: {}, Data: {}", id, ventaDTO);
+        LOG.debug("Validating sale ID");
         if (ventaDTO.getId() == null) {
+            LOG.error("Attempt to update sale without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, ventaDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, ventaDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Verifying existence of sale with ID: {}", id);
         if (!ventaRepository.existsById(id)) {
+            LOG.error("Sale not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Updating sale through service");
         ventaDTO = ventaService.update(ventaDTO);
+        LOG.info("Sale successfully updated. ID: {}", ventaDTO.getId());
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, ventaDTO.getId().toString()))
             .body(ventaDTO);
@@ -112,20 +122,26 @@ public class VentaResource {
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody VentaDTO ventaDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to partial update Venta partially : {}, {}", id, ventaDTO);
+        LOG.debug("REST request to partially update Sale. ID: {}, Data: {}", id, ventaDTO);
+        LOG.debug("Validating sale ID");
         if (ventaDTO.getId() == null) {
+            LOG.error("Attempt to partial update without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, ventaDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, ventaDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Verifying existence of sale with ID: {}", id);
         if (!ventaRepository.existsById(id)) {
+            LOG.error("Sale not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Performing partial update of sale");
         Optional<VentaDTO> result = ventaService.partialUpdate(ventaDTO);
-
+        LOG.info("Partial update completed for sale ID: {}", id);
         return ResponseUtil.wrapOrNotFound(
             result,
             HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, ventaDTO.getId().toString())
@@ -140,9 +156,12 @@ public class VentaResource {
      */
     @GetMapping("")
     public ResponseEntity<List<VentaDTO>> getAllVentas(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
-        LOG.debug("REST request to get a page of Ventas");
+        LOG.debug("REST request to get all Sales. Pageable: {}", pageable);
+        LOG.debug("Retrieving page of sales");
         Page<VentaDTO> page = ventaService.findAll(pageable);
+        LOG.debug("Total elements found: {}", page.getTotalElements());
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
+        LOG.info("Returning {} sales", page.getNumberOfElements());
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
@@ -154,8 +173,14 @@ public class VentaResource {
      */
     @GetMapping("/{id}")
     public ResponseEntity<VentaDTO> getVenta(@PathVariable("id") Long id) {
-        LOG.debug("REST request to get Venta : {}", id);
+        LOG.debug("REST request to get Sale with ID: {}", id);
+        LOG.debug("Looking up sale in service");
         Optional<VentaDTO> ventaDTO = ventaService.findOne(id);
+        if (ventaDTO.isPresent()) {
+            LOG.info("Sale found with ID: {}", id);
+        } else {
+            LOG.warn("Sale not found with ID: {}", id);
+        }
         return ResponseUtil.wrapOrNotFound(ventaDTO);
     }
 
@@ -167,17 +192,26 @@ public class VentaResource {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVenta(@PathVariable("id") Long id) {
-        LOG.debug("REST request to delete Venta : {}", id);
+        LOG.debug("REST request to delete Sale with ID: {}", id);
+        LOG.debug("Starting deletion process");
         ventaService.delete(id);
+        LOG.info("Sale successfully deleted. ID: {}", id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
     }
 
+    /**
+     * {@code GET  /user/:userId/ventas} : get all the ventas by user.
+     * @param userId the id of the owner of the sale to retrieve
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of ventas in body
+     */
     @GetMapping("/user/{userId}/ventas")
     public ResponseEntity<List<VentaDTO>> getAllVentasByUserId(@PathVariable Long userId) {
-        LOG.debug("REST request to get all Ventas by user with id: {}", userId);
+        LOG.debug("REST request to get all Sales for user with ID: {}", userId);
+        LOG.debug("Retrieving sales for user");
         List<VentaDTO> ventas = ventaService.getVentasByUserId(userId);
+        LOG.info("Found {} sales for user ID: {}", ventas.size(), userId);
         return ResponseEntity.ok().body(ventas);
     }
 }

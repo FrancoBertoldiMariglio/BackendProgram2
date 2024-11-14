@@ -52,11 +52,15 @@ public class CaracteristicaResource {
     @PostMapping("")
     public ResponseEntity<CaracteristicaDTO> createCaracteristica(@Valid @RequestBody CaracteristicaDTO caracteristicaDTO)
         throws URISyntaxException {
-        LOG.debug("REST request to save Caracteristica : {}", caracteristicaDTO);
+        LOG.debug("REST request to create new Characteristic: {}", caracteristicaDTO);
+        LOG.debug("Validating characteristic data");
         if (caracteristicaDTO.getId() != null) {
-            throw new BadRequestAlertException("A new caracteristica cannot already have an ID", ENTITY_NAME, "idexists");
+            LOG.error("Attempt to create characteristic with existing ID: {}", caracteristicaDTO.getId());
+            throw new BadRequestAlertException("A new characteristic cannot already have an ID", ENTITY_NAME, "idexists");
         }
+        LOG.debug("Saving new characteristic");
         caracteristicaDTO = caracteristicaService.save(caracteristicaDTO);
+        LOG.info("Characteristic created successfully with ID: {}", caracteristicaDTO.getId());
         return ResponseEntity.created(new URI("/api/caracteristicas/" + caracteristicaDTO.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, caracteristicaDTO.getId().toString()))
             .body(caracteristicaDTO);
@@ -77,19 +81,26 @@ public class CaracteristicaResource {
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody CaracteristicaDTO caracteristicaDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to update Caracteristica : {}, {}", id, caracteristicaDTO);
+        LOG.debug("REST request to update Characteristic. ID: {}, Data: {}", id, caracteristicaDTO);
+        LOG.debug("Validating characteristic ID");
         if (caracteristicaDTO.getId() == null) {
+            LOG.error("Attempt to update characteristic without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, caracteristicaDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, caracteristicaDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Checking if characteristic exists with ID: {}", id);
         if (!caracteristicaRepository.existsById(id)) {
+            LOG.error("Characteristic not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Updating characteristic through service");
         caracteristicaDTO = caracteristicaService.update(caracteristicaDTO);
+        LOG.info("Characteristic updated successfully with ID: {}", caracteristicaDTO.getId());
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, caracteristicaDTO.getId().toString()))
             .body(caracteristicaDTO);
@@ -111,20 +122,26 @@ public class CaracteristicaResource {
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody CaracteristicaDTO caracteristicaDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to partial update Caracteristica partially : {}, {}", id, caracteristicaDTO);
+        LOG.debug("REST request to partially update Characteristic. ID: {}, Data: {}", id, caracteristicaDTO);
+        LOG.debug("Validating characteristic data");
         if (caracteristicaDTO.getId() == null) {
+            LOG.error("Attempt to partially update without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, caracteristicaDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, caracteristicaDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Checking if characteristic exists with ID: {}", id);
         if (!caracteristicaRepository.existsById(id)) {
+            LOG.error("Characteristic not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Processing partial update");
         Optional<CaracteristicaDTO> result = caracteristicaService.partialUpdate(caracteristicaDTO);
-
+        LOG.info("Partial update completed for characteristic ID: {}", id);
         return ResponseUtil.wrapOrNotFound(
             result,
             HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, caracteristicaDTO.getId().toString())
@@ -138,8 +155,11 @@ public class CaracteristicaResource {
      */
     @GetMapping("")
     public List<CaracteristicaDTO> getAllCaracteristicas() {
-        LOG.debug("REST request to get all Caracteristicas");
-        return caracteristicaService.findAll();
+        LOG.debug("REST request to get all Characteristics");
+        LOG.debug("Retrieving all characteristics");
+        List<CaracteristicaDTO> result = caracteristicaService.findAll();
+        LOG.info("Retrieved {} characteristics", result.size());
+        return result;
     }
 
     /**
@@ -150,8 +170,14 @@ public class CaracteristicaResource {
      */
     @GetMapping("/{id}")
     public ResponseEntity<CaracteristicaDTO> getCaracteristica(@PathVariable("id") Long id) {
-        LOG.debug("REST request to get Caracteristica : {}", id);
+        LOG.debug("REST request to get Characteristic with ID: {}", id);
+        LOG.debug("Looking up characteristic in service");
         Optional<CaracteristicaDTO> caracteristicaDTO = caracteristicaService.findOne(id);
+        if (caracteristicaDTO.isPresent()) {
+            LOG.info("Characteristic found with ID: {}", id);
+        } else {
+            LOG.warn("Characteristic not found with ID: {}", id);
+        }
         return ResponseUtil.wrapOrNotFound(caracteristicaDTO);
     }
 
@@ -163,8 +189,10 @@ public class CaracteristicaResource {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCaracteristica(@PathVariable("id") Long id) {
-        LOG.debug("REST request to delete Caracteristica : {}", id);
+        LOG.debug("REST request to delete Characteristic with ID: {}", id);
+        LOG.debug("Starting deletion process");
         caracteristicaService.delete(id);
+        LOG.info("Characteristic successfully deleted with ID: {}", id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();

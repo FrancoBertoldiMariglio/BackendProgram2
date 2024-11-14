@@ -56,11 +56,17 @@ public class AdicionalResource {
      */
     @PostMapping("")
     public ResponseEntity<AdicionalDTO> createAdicional(@Valid @RequestBody AdicionalDTO adicionalDTO) throws URISyntaxException {
-        LOG.debug("REST request to save Adicional : {}", adicionalDTO);
+        LOG.debug("REST request to create new Additional: {}", adicionalDTO);
+        LOG.debug("Validating additional data");
         if (adicionalDTO.getId() != null) {
-            throw new BadRequestAlertException("A new adicional cannot already have an ID", ENTITY_NAME, "idexists");
+            LOG.error("Attempt to create additional with existing ID: {}", adicionalDTO.getId());
+            throw new BadRequestAlertException("A new additional cannot already have an ID", ENTITY_NAME, "idexists");
         }
+
+        LOG.debug("Saving new additional");
         adicionalDTO = adicionalService.save(adicionalDTO);
+        LOG.info("Additional created successfully with ID: {}", adicionalDTO.getId());
+
         return ResponseEntity.created(new URI("/api/adicionals/" + adicionalDTO.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, adicionalDTO.getId().toString()))
             .body(adicionalDTO);
@@ -81,19 +87,26 @@ public class AdicionalResource {
         @PathVariable(value = "id", required = false) final Long id,
         @Valid @RequestBody AdicionalDTO adicionalDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to update Adicional : {}, {}", id, adicionalDTO);
+        LOG.debug("REST request to update Additional. ID: {}, Data: {}", id, adicionalDTO);
+        LOG.debug("Validating additional ID");
         if (adicionalDTO.getId() == null) {
+            LOG.error("Attempt to update additional without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, adicionalDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, adicionalDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Checking if additional exists with ID: {}", id);
         if (!adicionalRepository.existsById(id)) {
+            LOG.error("Additional not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Updating additional through service");
         adicionalDTO = adicionalService.update(adicionalDTO);
+        LOG.info("Additional updated successfully with ID: {}", adicionalDTO.getId());
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, adicionalDTO.getId().toString()))
             .body(adicionalDTO);
@@ -115,20 +128,26 @@ public class AdicionalResource {
         @PathVariable(value = "id", required = false) final Long id,
         @NotNull @RequestBody AdicionalDTO adicionalDTO
     ) throws URISyntaxException {
-        LOG.debug("REST request to partial update Adicional partially : {}, {}", id, adicionalDTO);
+        LOG.debug("REST request to partially update Additional. ID: {}, Data: {}", id, adicionalDTO);
+        LOG.debug("Validating additional data");
         if (adicionalDTO.getId() == null) {
+            LOG.error("Attempt to partially update without ID");
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
         if (!Objects.equals(id, adicionalDTO.getId())) {
+            LOG.error("Path ID ({}) does not match DTO ID ({})", id, adicionalDTO.getId());
             throw new BadRequestAlertException("Invalid ID", ENTITY_NAME, "idinvalid");
         }
 
+        LOG.debug("Checking if additional exists with ID: {}", id);
         if (!adicionalRepository.existsById(id)) {
+            LOG.error("Additional not found with ID: {}", id);
             throw new BadRequestAlertException("Entity not found", ENTITY_NAME, "idnotfound");
         }
 
+        LOG.debug("Processing partial update");
         Optional<AdicionalDTO> result = adicionalService.partialUpdate(adicionalDTO);
-
+        LOG.info("Partial update completed for additional ID: {}", id);
         return ResponseUtil.wrapOrNotFound(
             result,
             HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, adicionalDTO.getId().toString())
@@ -143,9 +162,12 @@ public class AdicionalResource {
      */
     @GetMapping("")
     public ResponseEntity<List<AdicionalDTO>> getAllAdicionals(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
-        LOG.debug("REST request to get a page of Adicionals");
+        LOG.debug("REST request to get all Additionals. Pageable: {}", pageable);
+        LOG.debug("Retrieving page of additionals");
         Page<AdicionalDTO> page = adicionalService.findAll(pageable);
+        LOG.debug("Total elements found: {}", page.getTotalElements());
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
+        LOG.info("Returning {} additionals", page.getNumberOfElements());
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
@@ -157,8 +179,14 @@ public class AdicionalResource {
      */
     @GetMapping("/{id}")
     public ResponseEntity<AdicionalDTO> getAdicional(@PathVariable("id") Long id) {
-        LOG.debug("REST request to get Adicional : {}", id);
+        LOG.debug("REST request to get Additional with ID: {}", id);
+        LOG.debug("Looking up additional in service");
         Optional<AdicionalDTO> adicionalDTO = adicionalService.findOne(id);
+        if (adicionalDTO.isPresent()) {
+            LOG.info("Additional found with ID: {}", id);
+        } else {
+            LOG.warn("Additional not found with ID: {}", id);
+        }
         return ResponseUtil.wrapOrNotFound(adicionalDTO);
     }
 
@@ -170,8 +198,10 @@ public class AdicionalResource {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAdicional(@PathVariable("id") Long id) {
-        LOG.debug("REST request to delete Adicional : {}", id);
+        LOG.debug("REST request to delete Additional with ID: {}", id);
+        LOG.debug("Starting deletion process");
         adicionalService.delete(id);
+        LOG.info("Additional successfully deleted with ID: {}", id);
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
