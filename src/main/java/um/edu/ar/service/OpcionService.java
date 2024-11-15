@@ -22,7 +22,6 @@ public class OpcionService {
     private static final Logger LOG = LoggerFactory.getLogger(OpcionService.class);
 
     private final OpcionRepository opcionRepository;
-
     private final OpcionMapper opcionMapper;
 
     public OpcionService(OpcionRepository opcionRepository, OpcionMapper opcionMapper) {
@@ -37,9 +36,12 @@ public class OpcionService {
      * @return the persisted entity.
      */
     public OpcionDTO save(OpcionDTO opcionDTO) {
-        LOG.debug("Request to save Opcion : {}", opcionDTO);
+        LOG.debug("Request to save Option: {}", opcionDTO);
+        LOG.debug("Converting DTO to entity");
         Opcion opcion = opcionMapper.toEntity(opcionDTO);
+        LOG.debug("Saving option entity");
         opcion = opcionRepository.save(opcion);
+        LOG.info("Successfully saved option with ID: {}", opcion.getId());
         return opcionMapper.toDto(opcion);
     }
 
@@ -50,9 +52,12 @@ public class OpcionService {
      * @return the persisted entity.
      */
     public OpcionDTO update(OpcionDTO opcionDTO) {
-        LOG.debug("Request to update Opcion : {}", opcionDTO);
+        LOG.debug("Request to update Option: {}", opcionDTO);
+        LOG.debug("Converting DTO to entity for update");
         Opcion opcion = opcionMapper.toEntity(opcionDTO);
+        LOG.debug("Updating option entity");
         opcion = opcionRepository.save(opcion);
+        LOG.info("Successfully updated option with ID: {}", opcion.getId());
         return opcionMapper.toDto(opcion);
     }
 
@@ -63,17 +68,24 @@ public class OpcionService {
      * @return the persisted entity.
      */
     public Optional<OpcionDTO> partialUpdate(OpcionDTO opcionDTO) {
-        LOG.debug("Request to partially update Opcion : {}", opcionDTO);
+        LOG.debug("Request to partially update Option: {}", opcionDTO);
+        LOG.debug("Looking up existing option with ID: {}", opcionDTO.getId());
 
         return opcionRepository
             .findById(opcionDTO.getId())
             .map(existingOpcion -> {
+                LOG.debug("Found existing option, applying partial update");
                 opcionMapper.partialUpdate(existingOpcion, opcionDTO);
-
                 return existingOpcion;
             })
-            .map(opcionRepository::save)
-            .map(opcionMapper::toDto);
+            .map(opcion -> {
+                LOG.debug("Saving partially updated option");
+                return opcionRepository.save(opcion);
+            })
+            .map(opcion -> {
+                LOG.info("Successfully completed partial update of option with ID: {}", opcion.getId());
+                return opcionMapper.toDto(opcion);
+            });
     }
 
     /**
@@ -84,8 +96,10 @@ public class OpcionService {
      */
     @Transactional(readOnly = true)
     public Page<OpcionDTO> findAll(Pageable pageable) {
-        LOG.debug("Request to get all Opcions");
-        return opcionRepository.findAll(pageable).map(opcionMapper::toDto);
+        LOG.debug("Request to get all Options with pageable: {}", pageable);
+        Page<OpcionDTO> result = opcionRepository.findAll(pageable).map(opcionMapper::toDto);
+        LOG.info("Retrieved {} options", result.getTotalElements());
+        return result;
     }
 
     /**
@@ -96,8 +110,14 @@ public class OpcionService {
      */
     @Transactional(readOnly = true)
     public Optional<OpcionDTO> findOne(Long id) {
-        LOG.debug("Request to get Opcion : {}", id);
-        return opcionRepository.findById(id).map(opcionMapper::toDto);
+        LOG.debug("Request to get Option by ID: {}", id);
+        Optional<OpcionDTO> result = opcionRepository.findById(id).map(opcionMapper::toDto);
+        if (result.isPresent()) {
+            LOG.info("Found option with ID: {}", id);
+        } else {
+            LOG.warn("Option not found with ID: {}", id);
+        }
+        return result;
     }
 
     /**
@@ -106,7 +126,9 @@ public class OpcionService {
      * @param id the id of the entity.
      */
     public void delete(Long id) {
-        LOG.debug("Request to delete Opcion : {}", id);
+        LOG.debug("Request to delete Option with ID: {}", id);
+        LOG.debug("Executing deletion");
         opcionRepository.deleteById(id);
+        LOG.info("Successfully deleted option with ID: {}", id);
     }
 }

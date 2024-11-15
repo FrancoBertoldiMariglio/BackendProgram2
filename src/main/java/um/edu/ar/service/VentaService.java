@@ -39,14 +39,13 @@ public class VentaService {
 
     private final VentaRepository ventaRepository;
     private final UserRepository userRepository;
-
     private final VentaMapper ventaMapper;
 
     private static final RestTemplate restTemplate = new RestTemplate();
-
     private static final String postUrl = "http://192.168.194.254:8080/api/catedra/";
 
     public VentaService(VentaRepository ventaRepository, UserRepository userRepository, UserMapper userMapper, VentaMapper ventaMapper) {
+        LOG.info("Initializing VentaService");
         this.ventaRepository = ventaRepository;
         this.userRepository = userRepository;
         this.ventaMapper = ventaMapper;
@@ -59,9 +58,12 @@ public class VentaService {
      * @return the persisted entity.
      */
     public VentaDTO save(VentaDTO ventaDTO) {
-        LOG.debug("Request to save Venta : {}", ventaDTO);
+        LOG.debug("Request to save Sale : {}", ventaDTO);
+        LOG.debug("Converting DTO to entity");
         Venta venta = ventaMapper.toEntity(ventaDTO);
+        LOG.debug("Saving sale entity");
         venta = ventaRepository.save(venta);
+        LOG.info("Sale successfully saved with ID: {}", venta.getId());
         return ventaMapper.toDto(venta);
     }
 
@@ -72,9 +74,12 @@ public class VentaService {
      * @return the persisted entity.
      */
     public VentaDTO update(VentaDTO ventaDTO) {
-        LOG.debug("Request to update Venta : {}", ventaDTO);
+        LOG.debug("Request to update Sale : {}", ventaDTO);
+        LOG.debug("Converting DTO to entity for update");
         Venta venta = ventaMapper.toEntity(ventaDTO);
+        LOG.debug("Updating sale entity");
         venta = ventaRepository.save(venta);
+        LOG.info("Sale successfully updated with ID: {}", venta.getId());
         return ventaMapper.toDto(venta);
     }
 
@@ -85,17 +90,24 @@ public class VentaService {
      * @return the persisted entity.
      */
     public Optional<VentaDTO> partialUpdate(VentaDTO ventaDTO) {
-        LOG.debug("Request to partially update Venta : {}", ventaDTO);
+        LOG.debug("Request to partially update Sale : {}", ventaDTO);
+        LOG.debug("Looking up existing sale with ID: {}", ventaDTO.getId());
 
         return ventaRepository
             .findById(ventaDTO.getId())
             .map(existingVenta -> {
+                LOG.debug("Found existing sale, applying partial update");
                 ventaMapper.partialUpdate(existingVenta, ventaDTO);
-
                 return existingVenta;
             })
-            .map(ventaRepository::save)
-            .map(ventaMapper::toDto);
+            .map(venta -> {
+                LOG.debug("Saving partially updated sale");
+                return ventaRepository.save(venta);
+            })
+            .map(venta -> {
+                LOG.info("Sale partially updated successfully. ID: {}", venta.getId());
+                return ventaMapper.toDto(venta);
+            });
     }
 
     /**
@@ -106,8 +118,10 @@ public class VentaService {
      */
     @Transactional(readOnly = true)
     public Page<VentaDTO> findAll(Pageable pageable) {
-        LOG.debug("Request to get all Ventas");
-        return ventaRepository.findAll(pageable).map(ventaMapper::toDto);
+        LOG.debug("Request to get all Sales with pagination: {}", pageable);
+        Page<VentaDTO> result = ventaRepository.findAll(pageable).map(ventaMapper::toDto);
+        LOG.info("Retrieved {} sales", result.getTotalElements());
+        return result;
     }
 
     /**
@@ -118,8 +132,14 @@ public class VentaService {
      */
     @Transactional(readOnly = true)
     public Optional<VentaDTO> findOne(Long id) {
-        LOG.debug("Request to get Venta : {}", id);
-        return ventaRepository.findById(id).map(ventaMapper::toDto);
+        LOG.debug("Request to get Sale by ID: {}", id);
+        Optional<VentaDTO> result = ventaRepository.findById(id).map(ventaMapper::toDto);
+        if (result.isPresent()) {
+            LOG.info("Sale found with ID: {}", id);
+        } else {
+            LOG.warn("Sale not found with ID: {}", id);
+        }
+        return result;
     }
 
     /**
@@ -128,49 +148,68 @@ public class VentaService {
      * @param id the id of the entity.
      */
     public void delete(Long id) {
-        LOG.debug("Request to delete Venta : {}", id);
+        LOG.debug("Request to delete Sale with ID: {}", id);
+        LOG.debug("Executing deletion");
         ventaRepository.deleteById(id);
+        LOG.info("Sale successfully deleted with ID: {}", id);
     }
 
     public Venta realizarVenta(VentaDTO ventaDTO) {
-        LOG.debug("Request to save Venta : {}", ventaDTO);
+        LOG.debug("Request to process new Sale: {}", ventaDTO);
+        LOG.debug("Loading authentication token");
         String token = loadTokenFromFile();
 
-        User user = userRepository.findById(ventaDTO.getUser().getId()).orElseThrow(() -> new RuntimeException("User not found"));
+        LOG.debug("Looking up user with ID: {}", ventaDTO.getUser().getId());
+        User user = userRepository
+            .findById(ventaDTO.getUser().getId())
+            .orElseThrow(() -> {
+                LOG.error("User not found with ID: {}", ventaDTO.getUser().getId());
+                return new RuntimeException("User not found");
+            });
 
+        LOG.debug("Preparing HTTP request to external service");
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
-
         HttpEntity<VentaDTO> entity = new HttpEntity<>(ventaDTO, headers);
 
+        LOG.debug("Sending sale request to external service");
         ResponseEntity<VentaProfeDTO> response = restTemplate.exchange(postUrl + "/vender", HttpMethod.POST, entity, VentaProfeDTO.class);
-        Venta venta = new Venta();
 
         if (response.getStatusCode().is2xxSuccessful()) {
+            LOG.debug("External service request successful, creating local sale record");
+            Venta venta = new Venta();
             venta.setId(Objects.requireNonNull(response.getBody()).getIdVenta());
             venta.setFechaVenta(ventaDTO.getFechaVenta());
             venta.setGanancia(ventaDTO.getPrecioFinal());
             venta.setUser(user);
+
+            LOG.debug("Saving sale to local database");
             venta = ventaRepository.save(venta);
+            LOG.info("Sale successfully processed and saved with ID: {}", venta.getId());
+            return venta;
         } else {
-            LOG.error("Error during venta request, status code: {}", response.getStatusCode());
-            throw new RuntimeException("Error during venta request");
+            LOG.error("External service request failed with status code: {}", response.getStatusCode());
+            throw new RuntimeException("Error during sale request");
         }
-        return venta;
     }
 
     public List<VentaDTO> getVentasByUserId(Long userId) {
+        LOG.debug("Request to get all Sales for user with ID: {}", userId);
         List<Venta> ventas = ventaRepository.findByUserId(userId);
-        return ventas.stream().map(ventaMapper::toDto).collect(Collectors.toList());
+        List<VentaDTO> result = ventas.stream().map(ventaMapper::toDto).collect(Collectors.toList());
+        LOG.info("Found {} sales for user ID: {}", result.size(), userId);
+        return result;
     }
 
     private String loadTokenFromFile() {
+        LOG.debug("Attempting to load authentication token from file");
         try {
             byte[] bytes = Files.readAllBytes(Paths.get("token.json"));
             JSONObject jsonObject = new JSONObject(new String(bytes));
+            LOG.debug("Authentication token successfully loaded");
             return jsonObject.getString("token");
         } catch (IOException e) {
-            LOG.error("Error loading token from file", e);
+            LOG.error("Failed to load authentication token from file", e);
             throw new RuntimeException("Error loading token from file", e);
         }
     }

@@ -22,10 +22,10 @@ public class AdicionalService {
     private static final Logger LOG = LoggerFactory.getLogger(AdicionalService.class);
 
     private final AdicionalRepository adicionalRepository;
-
     private final AdicionalMapper adicionalMapper;
 
     public AdicionalService(AdicionalRepository adicionalRepository, AdicionalMapper adicionalMapper) {
+        LOG.info("Initializing AdditionalService");
         this.adicionalRepository = adicionalRepository;
         this.adicionalMapper = adicionalMapper;
     }
@@ -37,9 +37,12 @@ public class AdicionalService {
      * @return the persisted entity.
      */
     public AdicionalDTO save(AdicionalDTO adicionalDTO) {
-        LOG.debug("Request to save Adicional : {}", adicionalDTO);
+        LOG.debug("Request to save Additional: {}", adicionalDTO);
+        LOG.debug("Converting DTO to entity");
         Adicional adicional = adicionalMapper.toEntity(adicionalDTO);
+        LOG.debug("Saving additional entity");
         adicional = adicionalRepository.save(adicional);
+        LOG.info("Successfully saved additional with ID: {}", adicional.getId());
         return adicionalMapper.toDto(adicional);
     }
 
@@ -50,9 +53,12 @@ public class AdicionalService {
      * @return the persisted entity.
      */
     public AdicionalDTO update(AdicionalDTO adicionalDTO) {
-        LOG.debug("Request to update Adicional : {}", adicionalDTO);
+        LOG.debug("Request to update Additional: {}", adicionalDTO);
+        LOG.debug("Converting DTO to entity for update");
         Adicional adicional = adicionalMapper.toEntity(adicionalDTO);
+        LOG.debug("Updating additional entity");
         adicional = adicionalRepository.save(adicional);
+        LOG.info("Successfully updated additional with ID: {}", adicional.getId());
         return adicionalMapper.toDto(adicional);
     }
 
@@ -63,17 +69,24 @@ public class AdicionalService {
      * @return the persisted entity.
      */
     public Optional<AdicionalDTO> partialUpdate(AdicionalDTO adicionalDTO) {
-        LOG.debug("Request to partially update Adicional : {}", adicionalDTO);
+        LOG.debug("Request to partially update Additional: {}", adicionalDTO);
+        LOG.debug("Looking up existing additional with ID: {}", adicionalDTO.getId());
 
         return adicionalRepository
             .findById(adicionalDTO.getId())
             .map(existingAdicional -> {
+                LOG.debug("Found existing additional, applying partial update");
                 adicionalMapper.partialUpdate(existingAdicional, adicionalDTO);
-
                 return existingAdicional;
             })
-            .map(adicionalRepository::save)
-            .map(adicionalMapper::toDto);
+            .map(adicional -> {
+                LOG.debug("Saving partially updated additional");
+                return adicionalRepository.save(adicional);
+            })
+            .map(adicional -> {
+                LOG.info("Successfully completed partial update of additional with ID: {}", adicional.getId());
+                return adicionalMapper.toDto(adicional);
+            });
     }
 
     /**
@@ -84,8 +97,10 @@ public class AdicionalService {
      */
     @Transactional(readOnly = true)
     public Page<AdicionalDTO> findAll(Pageable pageable) {
-        LOG.debug("Request to get all Adicionals");
-        return adicionalRepository.findAll(pageable).map(adicionalMapper::toDto);
+        LOG.debug("Request to get all Additionals with pageable: {}", pageable);
+        Page<AdicionalDTO> result = adicionalRepository.findAll(pageable).map(adicionalMapper::toDto);
+        LOG.info("Retrieved {} additionals", result.getTotalElements());
+        return result;
     }
 
     /**
@@ -96,8 +111,14 @@ public class AdicionalService {
      */
     @Transactional(readOnly = true)
     public Optional<AdicionalDTO> findOne(Long id) {
-        LOG.debug("Request to get Adicional : {}", id);
-        return adicionalRepository.findById(id).map(adicionalMapper::toDto);
+        LOG.debug("Request to get Additional by ID: {}", id);
+        Optional<AdicionalDTO> result = adicionalRepository.findById(id).map(adicionalMapper::toDto);
+        if (result.isPresent()) {
+            LOG.info("Found additional with ID: {}", id);
+        } else {
+            LOG.warn("Additional not found with ID: {}", id);
+        }
+        return result;
     }
 
     /**
@@ -106,7 +127,9 @@ public class AdicionalService {
      * @param id the id of the entity.
      */
     public void delete(Long id) {
-        LOG.debug("Request to delete Adicional : {}", id);
+        LOG.debug("Request to delete Additional with ID: {}", id);
+        LOG.debug("Executing deletion");
         adicionalRepository.deleteById(id);
+        LOG.info("Successfully deleted additional with ID: {}", id);
     }
 }

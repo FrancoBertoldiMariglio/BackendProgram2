@@ -23,10 +23,10 @@ public class CaracteristicaService {
     private static final Logger LOG = LoggerFactory.getLogger(CaracteristicaService.class);
 
     private final CaracteristicaRepository caracteristicaRepository;
-
     private final CaracteristicaMapper caracteristicaMapper;
 
     public CaracteristicaService(CaracteristicaRepository caracteristicaRepository, CaracteristicaMapper caracteristicaMapper) {
+        LOG.info("Initializing CharacteristicService");
         this.caracteristicaRepository = caracteristicaRepository;
         this.caracteristicaMapper = caracteristicaMapper;
     }
@@ -38,9 +38,12 @@ public class CaracteristicaService {
      * @return the persisted entity.
      */
     public CaracteristicaDTO save(CaracteristicaDTO caracteristicaDTO) {
-        LOG.debug("Request to save Caracteristica : {}", caracteristicaDTO);
+        LOG.debug("Request to save Characteristic: {}", caracteristicaDTO);
+        LOG.debug("Converting DTO to entity");
         Caracteristica caracteristica = caracteristicaMapper.toEntity(caracteristicaDTO);
+        LOG.debug("Saving characteristic entity");
         caracteristica = caracteristicaRepository.save(caracteristica);
+        LOG.info("Successfully saved characteristic with ID: {}", caracteristica.getId());
         return caracteristicaMapper.toDto(caracteristica);
     }
 
@@ -51,9 +54,12 @@ public class CaracteristicaService {
      * @return the persisted entity.
      */
     public CaracteristicaDTO update(CaracteristicaDTO caracteristicaDTO) {
-        LOG.debug("Request to update Caracteristica : {}", caracteristicaDTO);
+        LOG.debug("Request to update Characteristic: {}", caracteristicaDTO);
+        LOG.debug("Converting DTO to entity for update");
         Caracteristica caracteristica = caracteristicaMapper.toEntity(caracteristicaDTO);
+        LOG.debug("Updating characteristic entity");
         caracteristica = caracteristicaRepository.save(caracteristica);
+        LOG.info("Successfully updated characteristic with ID: {}", caracteristica.getId());
         return caracteristicaMapper.toDto(caracteristica);
     }
 
@@ -64,17 +70,24 @@ public class CaracteristicaService {
      * @return the persisted entity.
      */
     public Optional<CaracteristicaDTO> partialUpdate(CaracteristicaDTO caracteristicaDTO) {
-        LOG.debug("Request to partially update Caracteristica : {}", caracteristicaDTO);
+        LOG.debug("Request to partially update Characteristic: {}", caracteristicaDTO);
+        LOG.debug("Looking up existing characteristic with ID: {}", caracteristicaDTO.getId());
 
         return caracteristicaRepository
             .findById(caracteristicaDTO.getId())
             .map(existingCaracteristica -> {
+                LOG.debug("Found existing characteristic, applying partial update");
                 caracteristicaMapper.partialUpdate(existingCaracteristica, caracteristicaDTO);
-
                 return existingCaracteristica;
             })
-            .map(caracteristicaRepository::save)
-            .map(caracteristicaMapper::toDto);
+            .map(caracteristica -> {
+                LOG.debug("Saving partially updated characteristic");
+                return caracteristicaRepository.save(caracteristica);
+            })
+            .map(caracteristica -> {
+                LOG.info("Successfully completed partial update of characteristic with ID: {}", caracteristica.getId());
+                return caracteristicaMapper.toDto(caracteristica);
+            });
     }
 
     /**
@@ -84,12 +97,14 @@ public class CaracteristicaService {
      */
     @Transactional(readOnly = true)
     public List<CaracteristicaDTO> findAll() {
-        LOG.debug("Request to get all Caracteristicas");
-        return caracteristicaRepository
+        LOG.debug("Request to get all Characteristics");
+        List<CaracteristicaDTO> results = caracteristicaRepository
             .findAll()
             .stream()
             .map(caracteristicaMapper::toDto)
             .collect(Collectors.toCollection(LinkedList::new));
+        LOG.info("Retrieved {} characteristics", results.size());
+        return results;
     }
 
     /**
@@ -100,8 +115,14 @@ public class CaracteristicaService {
      */
     @Transactional(readOnly = true)
     public Optional<CaracteristicaDTO> findOne(Long id) {
-        LOG.debug("Request to get Caracteristica : {}", id);
-        return caracteristicaRepository.findById(id).map(caracteristicaMapper::toDto);
+        LOG.debug("Request to get Characteristic by ID: {}", id);
+        Optional<CaracteristicaDTO> result = caracteristicaRepository.findById(id).map(caracteristicaMapper::toDto);
+        if (result.isPresent()) {
+            LOG.info("Found characteristic with ID: {}", id);
+        } else {
+            LOG.warn("Characteristic not found with ID: {}", id);
+        }
+        return result;
     }
 
     /**
@@ -110,7 +131,9 @@ public class CaracteristicaService {
      * @param id the id of the entity.
      */
     public void delete(Long id) {
-        LOG.debug("Request to delete Caracteristica : {}", id);
+        LOG.debug("Request to delete Characteristic with ID: {}", id);
+        LOG.debug("Executing deletion");
         caracteristicaRepository.deleteById(id);
+        LOG.info("Successfully deleted characteristic with ID: {}", id);
     }
 }

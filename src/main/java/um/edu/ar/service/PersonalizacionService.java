@@ -22,7 +22,6 @@ public class PersonalizacionService {
     private static final Logger LOG = LoggerFactory.getLogger(PersonalizacionService.class);
 
     private final PersonalizacionRepository personalizacionRepository;
-
     private final PersonalizacionMapper personalizacionMapper;
 
     public PersonalizacionService(PersonalizacionRepository personalizacionRepository, PersonalizacionMapper personalizacionMapper) {
@@ -37,9 +36,12 @@ public class PersonalizacionService {
      * @return the persisted entity.
      */
     public PersonalizacionDTO save(PersonalizacionDTO personalizacionDTO) {
-        LOG.debug("Request to save Personalizacion : {}", personalizacionDTO);
+        LOG.debug("Request to save Personalization: {}", personalizacionDTO);
+        LOG.debug("Converting DTO to entity");
         Personalizacion personalizacion = personalizacionMapper.toEntity(personalizacionDTO);
+        LOG.debug("Saving personalization entity");
         personalizacion = personalizacionRepository.save(personalizacion);
+        LOG.info("Successfully saved personalization with ID: {}", personalizacion.getId());
         return personalizacionMapper.toDto(personalizacion);
     }
 
@@ -50,9 +52,12 @@ public class PersonalizacionService {
      * @return the persisted entity.
      */
     public PersonalizacionDTO update(PersonalizacionDTO personalizacionDTO) {
-        LOG.debug("Request to update Personalizacion : {}", personalizacionDTO);
+        LOG.debug("Request to update Personalization: {}", personalizacionDTO);
+        LOG.debug("Converting DTO to entity for update");
         Personalizacion personalizacion = personalizacionMapper.toEntity(personalizacionDTO);
+        LOG.debug("Updating personalization entity");
         personalizacion = personalizacionRepository.save(personalizacion);
+        LOG.info("Successfully updated personalization with ID: {}", personalizacion.getId());
         return personalizacionMapper.toDto(personalizacion);
     }
 
@@ -63,17 +68,24 @@ public class PersonalizacionService {
      * @return the persisted entity.
      */
     public Optional<PersonalizacionDTO> partialUpdate(PersonalizacionDTO personalizacionDTO) {
-        LOG.debug("Request to partially update Personalizacion : {}", personalizacionDTO);
+        LOG.debug("Request to partially update Personalization: {}", personalizacionDTO);
+        LOG.debug("Looking up existing personalization with ID: {}", personalizacionDTO.getId());
 
         return personalizacionRepository
             .findById(personalizacionDTO.getId())
             .map(existingPersonalizacion -> {
+                LOG.debug("Found existing personalization, applying partial update");
                 personalizacionMapper.partialUpdate(existingPersonalizacion, personalizacionDTO);
-
                 return existingPersonalizacion;
             })
-            .map(personalizacionRepository::save)
-            .map(personalizacionMapper::toDto);
+            .map(personalizacion -> {
+                LOG.debug("Saving partially updated personalization");
+                return personalizacionRepository.save(personalizacion);
+            })
+            .map(personalizacion -> {
+                LOG.info("Successfully completed partial update of personalization with ID: {}", personalizacion.getId());
+                return personalizacionMapper.toDto(personalizacion);
+            });
     }
 
     /**
@@ -84,8 +96,10 @@ public class PersonalizacionService {
      */
     @Transactional(readOnly = true)
     public Page<PersonalizacionDTO> findAll(Pageable pageable) {
-        LOG.debug("Request to get all Personalizacions");
-        return personalizacionRepository.findAll(pageable).map(personalizacionMapper::toDto);
+        LOG.debug("Request to get all Personalizations with pageable: {}", pageable);
+        Page<PersonalizacionDTO> result = personalizacionRepository.findAll(pageable).map(personalizacionMapper::toDto);
+        LOG.info("Retrieved {} personalizations", result.getTotalElements());
+        return result;
     }
 
     /**
@@ -96,8 +110,14 @@ public class PersonalizacionService {
      */
     @Transactional(readOnly = true)
     public Optional<PersonalizacionDTO> findOne(Long id) {
-        LOG.debug("Request to get Personalizacion : {}", id);
-        return personalizacionRepository.findById(id).map(personalizacionMapper::toDto);
+        LOG.debug("Request to get Personalization by ID: {}", id);
+        Optional<PersonalizacionDTO> result = personalizacionRepository.findById(id).map(personalizacionMapper::toDto);
+        if (result.isPresent()) {
+            LOG.info("Found personalization with ID: {}", id);
+        } else {
+            LOG.warn("Personalization not found with ID: {}", id);
+        }
+        return result;
     }
 
     /**
@@ -106,7 +126,9 @@ public class PersonalizacionService {
      * @param id the id of the entity.
      */
     public void delete(Long id) {
-        LOG.debug("Request to delete Personalizacion : {}", id);
+        LOG.debug("Request to delete Personalization with ID: {}", id);
+        LOG.debug("Executing deletion");
         personalizacionRepository.deleteById(id);
+        LOG.info("Successfully deleted personalization with ID: {}", id);
     }
 }
