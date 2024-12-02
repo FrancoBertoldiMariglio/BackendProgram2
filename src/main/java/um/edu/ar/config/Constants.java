@@ -10,6 +10,7 @@ public final class Constants {
 
     public static final String SYSTEM = "system";
     public static final String DEFAULT_LANGUAGE = "en";
+    public static final String API_URL = "http://192.168.194.254:8080/api/catedra";
 
     private Constants() {}
 }

@@ -96,7 +96,7 @@ public class AuthenticateController {
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setBearerAuth(jwt);
-        return new ResponseEntity<>(new AuthorizeResponse(jwt, user.getId(), roles), httpHeaders, HttpStatus.OK);
+        return new ResponseEntity<>(new AuthorizeResponse(jwt, user.getId(), roles, user.getLogin()), httpHeaders, HttpStatus.OK);
     }
 
     /**
@@ -154,14 +154,16 @@ public class AuthenticateController {
      */
     static class AuthorizeResponse {
 
+        private String login;
         private String idToken;
         private Long userId;
         private Set<Authority> roles;
 
-        AuthorizeResponse(String idToken, Long userId, Set<Authority> roles) {
+        AuthorizeResponse(String idToken, Long userId, Set<Authority> roles, String login) {
             this.idToken = idToken;
             this.userId = userId;
             this.roles = roles;
+            this.login = login;
         }
 
         @JsonProperty("idToken")
@@ -189,6 +191,15 @@ public class AuthenticateController {
 
         void setRoles(Set<Authority> roles) {
             this.roles = roles;
+        }
+
+        @JsonProperty("login")
+        String getLogin() {
+            return login;
+        }
+
+        void setLogin(String login) {
+            this.login = login;
         }
     }
 }

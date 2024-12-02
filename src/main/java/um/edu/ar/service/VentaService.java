@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import um.edu.ar.config.Constants;
 import um.edu.ar.domain.User;
 import um.edu.ar.domain.Venta;
 import um.edu.ar.repository.UserRepository;
@@ -42,7 +43,8 @@ public class VentaService {
     private final VentaMapper ventaMapper;
 
     private static final RestTemplate restTemplate = new RestTemplate();
-    private static final String postUrl = "http://192.168.194.254:8080/api/catedra/";
+    //    private static final String postUrl = "http://192.168.194.254:8080/api/catedra/";
+    private static final String postUrl = Constants.API_URL;
 
     public VentaService(VentaRepository ventaRepository, UserRepository userRepository, UserMapper userMapper, VentaMapper ventaMapper) {
         LOG.info("Initializing VentaService");
