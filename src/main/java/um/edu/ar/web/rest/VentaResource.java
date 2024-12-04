@@ -53,7 +53,7 @@ public class VentaResource {
      * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new ventaDTO, or with status {@code 400 (Bad Request)} if the venta has already an ID.
      */
     @PostMapping("")
-    public Venta createVenta(@Valid @RequestBody VentaDTO ventaDTO) {
+    public ResponseEntity<VentaDTO> createVenta(@Valid @RequestBody VentaDTO ventaDTO) throws URISyntaxException {
         LOG.debug("REST request to save Sale: {}", ventaDTO);
         LOG.debug("Validating that sale has no existing ID");
         if (ventaDTO.getId() != null) {
@@ -61,9 +61,11 @@ public class VentaResource {
             throw new BadRequestAlertException("A new venta cannot already have an ID", ENTITY_NAME, "idexists");
         }
         LOG.debug("Processing sale through service");
-        Venta result = ventaService.realizarVenta(ventaDTO);
+        VentaDTO result = ventaService.realizarVenta(ventaDTO);
         LOG.info("Sale successfully created with ID: {}", result.getId());
-        return result;
+        return ResponseEntity.created(new URI("/api/ventas/" + result.getId()))
+            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
+            .body(result);
     }
 
     /**

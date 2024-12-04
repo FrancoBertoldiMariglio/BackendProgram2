@@ -58,8 +58,11 @@ class AuthenticateControllerIT {
         mockMvc
             .perform(post("/api/authenticate").contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(login)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id_token").isString())
-            .andExpect(jsonPath("$.id_token").isNotEmpty())
+            .andExpect(jsonPath("$.idToken").isString())
+            .andExpect(jsonPath("$.idToken").isNotEmpty())
+            .andExpect(jsonPath("$.userId").value(user.getId()))
+            .andExpect(jsonPath("$.login").value(user.getLogin()))
+            .andExpect(jsonPath("$.roles").isArray())
             .andExpect(header().string("Authorization", not(nullValue())))
             .andExpect(header().string("Authorization", not(is(emptyString()))));
     }
@@ -82,8 +85,11 @@ class AuthenticateControllerIT {
         mockMvc
             .perform(post("/api/authenticate").contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(login)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id_token").isString())
-            .andExpect(jsonPath("$.id_token").isNotEmpty())
+            .andExpect(jsonPath("$.idToken").isString())
+            .andExpect(jsonPath("$.idToken").isNotEmpty())
+            .andExpect(jsonPath("$.userId").value(user.getId()))
+            .andExpect(jsonPath("$.login").value(user.getLogin()))
+            .andExpect(jsonPath("$.roles").isArray())
             .andExpect(header().string("Authorization", not(nullValue())))
             .andExpect(header().string("Authorization", not(is(emptyString()))));
     }
@@ -96,7 +102,10 @@ class AuthenticateControllerIT {
         mockMvc
             .perform(post("/api/authenticate").contentType(MediaType.APPLICATION_JSON).content(om.writeValueAsBytes(login)))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.id_token").doesNotExist())
+            .andExpect(jsonPath("$.idToken").doesNotExist())
+            .andExpect(jsonPath("$.userId").doesNotExist())
+            .andExpect(jsonPath("$.login").doesNotExist())
+            .andExpect(jsonPath("$.roles").doesNotExist())
             .andExpect(header().doesNotExist("Authorization"));
     }
 }

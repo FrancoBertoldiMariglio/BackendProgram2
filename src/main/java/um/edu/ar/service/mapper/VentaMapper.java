@@ -11,11 +11,12 @@ import um.edu.ar.service.dto.VentaDTO;
  */
 @Mapper(componentModel = "spring")
 public interface VentaMapper extends EntityMapper<VentaDTO, Venta> {
-    @Mapping(target = "user", source = "user", qualifiedByName = "userId")
+    @Mapping(target = "user", source = "user", qualifiedByName = "userIdAndLogin")
     VentaDTO toDto(Venta s);
 
-    @Named("userId")
+    @Named("userIdAndLogin")
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "id", source = "id")
+    @Mapping(target = "login", source = "login")
     UserDTO toDtoUserId(User user);
 }

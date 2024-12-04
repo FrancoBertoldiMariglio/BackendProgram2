@@ -180,9 +180,26 @@ class PersonalizacionResourceIT {
         // Initialize the database
         insertedPersonalizacion = personalizacionRepository.saveAndFlush(personalizacion);
 
-        // Get all the personalizacionList
+        // Get all the personalizacionList with pagination
         restPersonalizacionMockMvc
-            .perform(get(ENTITY_API_URL + "?sort=id,desc"))
+            .perform(get("/api/personalizacions").param("page", "0").param("size", "10").param("sort", "id,desc"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+            .andExpect(jsonPath("$.[*].id").value(hasItem(personalizacion.getId().intValue())))
+            .andExpect(jsonPath("$.[*].nombre").value(hasItem(DEFAULT_NOMBRE)))
+            .andExpect(jsonPath("$.[*].descripcion").value(hasItem(DEFAULT_DESCRIPCION)))
+            .andExpect(header().string("X-Total-Count", String.valueOf(1)));
+    }
+
+    @Test
+    @Transactional
+    void getAllPersonalizacionsWithoutPagination() throws Exception {
+        // Initialize the database
+        insertedPersonalizacion = personalizacionRepository.saveAndFlush(personalizacion);
+
+        // Create request with unpaged option
+        restPersonalizacionMockMvc
+            .perform(get("/api/personalizacions").param("unpaged", "true"))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
             .andExpect(jsonPath("$.[*].id").value(hasItem(personalizacion.getId().intValue())))

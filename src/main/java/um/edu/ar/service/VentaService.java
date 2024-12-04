@@ -156,7 +156,7 @@ public class VentaService {
         LOG.info("Sale successfully deleted with ID: {}", id);
     }
 
-    public Venta realizarVenta(VentaDTO ventaDTO) {
+    public VentaDTO realizarVenta(VentaDTO ventaDTO) {
         LOG.debug("Request to process new Sale: {}", ventaDTO);
         LOG.debug("Loading authentication token");
         String token = loadTokenFromFile();
@@ -188,7 +188,7 @@ public class VentaService {
             LOG.debug("Saving sale to local database");
             venta = ventaRepository.save(venta);
             LOG.info("Sale successfully processed and saved with ID: {}", venta.getId());
-            return venta;
+            return ventaMapper.toDto(venta);
         } else {
             LOG.error("External service request failed with status code: {}", response.getStatusCode());
             throw new RuntimeException("Error during sale request");
